@@ -1,0 +1,11 @@
+{
+	"id": "ascii-tree-generator",
+	"name": "ASCII Tree Generator",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Convert indented code blocks with hierarchy markers into formatted ASCII tree diagrams.",
+	"author": "Matěj Michálek",
+	"authorUrl": "https://matejmichalek.com",
+	"fundingUrl": "https://matejmichalek.com",
+	"isDesktopOnly": false
+}
