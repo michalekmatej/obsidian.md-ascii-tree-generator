@@ -46,8 +46,11 @@ export default class TreePlugin extends Plugin {
       return `${node.leadingWhitespace}${prefix}${node.text}`;
     }).join('\n');
   
-    el.innerHTML = `<pre><code>${output}</code></pre>`;
+
+    // SAFE DOM construction
+    el.empty();
+    const pre = el.createEl('pre');
+    const code = pre.createEl('code');
+    code.setText(output);
   };
-  
-  
 }
