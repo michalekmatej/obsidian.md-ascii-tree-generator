@@ -1,4 +1,4 @@
-# Obsidian ASCII Tree Generator
+# ASCII Tree Generator for Obsidian
 
 Transform indented outlines into beautiful ASCII tree diagrams directly in your Obsidian notes. Perfect for technical documentation, project hierarchies, or mind-mapping.
 

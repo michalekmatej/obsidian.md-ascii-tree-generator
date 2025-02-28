@@ -6,6 +6,5 @@
 	"description": "Convert indented code blocks with hierarchy markers into formatted ASCII tree diagrams.",
 	"author": "Matěj Michálek",
 	"authorUrl": "https://matejmichalek.com",
-	"fundingUrl": "https://matejmichalek.com",
 	"isDesktopOnly": false
 }
