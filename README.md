@@ -114,6 +114,29 @@ Project
     └── Integration
 ```
 
+## **Available Commands**:
+
+This plugin provides three convenient commands accessible through the Command Palette (`Ctrl/Cmd + P`):
+
+### **Convert selection to tree code block**
+- **Usage**: Select text and run this command to wrap it in a `tree` code block
+- **Behavior**: 
+  - With text selected: Wraps selection in `tree` code block
+  - Without selection: Wraps the current line in `tree` code block
+- **Perfect for**: Converting existing lists or hierarchies into tree format
+
+### **Convert tree block back to text**
+- **Usage**: Place cursor anywhere within a tree code block and run this command
+- **Behavior**: Removes the `tree` wrapper, leaving just the plain text content
+
+### **Toggle tree block for selection**
+- **Usage**: Smart command that automatically chooses between adding or removing a `tree` code block
+- **Behavior**:
+  - If cursor is **inside** a tree block → removes the tree block
+  - If cursor is **outside** a tree block → converts selection/line to tree block
+
+**💡 Tip**: Assign keyboard shortcuts to these commands in Obsidian's Hotkeys settings for even faster workflow.
+
 ## **Installation**:
 
 1. Available through Obsidian's Community Plugins
