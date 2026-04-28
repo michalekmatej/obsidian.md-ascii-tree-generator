@@ -129,13 +129,36 @@ This plugin provides three convenient commands accessible through the Command Pa
 - **Usage**: Place cursor anywhere within a tree code block and run this command
 - **Behavior**: Removes the `tree` wrapper, leaving just the plain text content
 
-### **Toggle tree block for selection**
+### **Toggle tree block**
 - **Usage**: Smart command that automatically chooses between adding or removing a `tree` code block
 - **Behavior**:
   - If cursor is **inside** a tree block → removes the tree block
   - If cursor is **outside** a tree block → converts selection/line to tree block
 
 **💡 Tip**: Assign keyboard shortcuts to these commands in Obsidian's Hotkeys settings for even faster workflow.
+
+## **Settings**:
+
+The plugin settings page (Obsidian Settings → Community Plugins → ASCII Tree Generator) lets you configure:
+
+- **Connector dashes** — how many `─` characters follow each `├` or `└`. Default is 2, giving the classic `├──` style. Can be set between 1 and 10.
+- **Auto-append / to folders** — automatically adds a trailing `/` to any item that has children in the tree.
+
+### **Per-block connector width**
+
+You can override the global connector width for a specific block by adding a number after `tree` on the opening fence line:
+
+````
+```tree 4
+Project
+- src
+  - main.ts
+- docs
+  - README.md
+```
+````
+
+This produces `├────` connectors just for that block, while all other blocks keep using the global setting.
 
 ## **Installation**:
 
