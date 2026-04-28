@@ -1,7 +1,22 @@
-import { Plugin, Editor, MarkdownView } from 'obsidian';
+import { Plugin, Editor, MarkdownView, App, PluginSettingTab, Setting, MarkdownPostProcessorContext } from 'obsidian';
+
+interface AsciiTreeSettings {
+  dashCount: number;
+  autoAppendSlash: boolean;
+}
+
+const DEFAULT_SETTINGS: AsciiTreeSettings = {
+  dashCount: 2,
+  autoAppendSlash: false,
+};
 
 export default class TreePlugin extends Plugin {
+  settings: AsciiTreeSettings;
+
   async onload() {
+    await this.loadSettings();
+    this.addSettingTab(new AsciiTreeSettingTab(this.app, this));
+
     this.registerMarkdownCodeBlockProcessor('tree', this.treeProcessor);
     
     // Add command to convert selected text to tree code block
@@ -25,14 +40,43 @@ export default class TreePlugin extends Plugin {
     // Add command to toggle tree block
     this.addCommand({
       id: 'toggle-tree-block',
-      name: 'Toggle tree block for selection',
+      name: 'Toggle tree block',
       editorCallback: (editor: Editor, view: MarkdownView) => {
         this.toggleTreeBlock(editor);
       }
     });
   }
 
-  private treeProcessor = (source: string, el: HTMLElement) => {
+  async loadSettings() {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  }
+
+  async saveSettings() {
+    await this.saveData(this.settings);
+  }
+
+  private treeProcessor = (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
+    const { autoAppendSlash } = this.settings;
+
+    // Allow per-block dash count via ```tree <n>  (e.g. ```tree 4).
+    // Falls back to the global setting when no number is specified.
+    let dashCount = this.settings.dashCount;
+    const sectionInfo = ctx.getSectionInfo(el);
+    if (sectionInfo) {
+      const fenceLine = sectionInfo.text.split('\n')[sectionInfo.lineStart];
+      const fenceMatch = fenceLine.match(/^`{3,}tree\s+(\d+)\s*$/i);
+      if (fenceMatch) {
+        const parsed = parseInt(fenceMatch[1], 10);
+        if (parsed >= 1 && parsed <= 10) dashCount = parsed;
+      }
+    }
+
+    const dashes = '─'.repeat(dashCount);
+    const branch     = '├' + dashes + ' ';
+    const lastBranch = '└' + dashes + ' ';
+    const vertical   = '│' + ' '.repeat(dashCount + 1);
+    const empty      = ' '.repeat(dashCount + 2);
+
     const lines = source.split('\n');
 
     // Determine the common base indent across all non‑empty lines.
@@ -58,9 +102,9 @@ export default class TreePlugin extends Plugin {
 
     // Process each line into nodes according to the input methods.
     const nodes = adjustedLines.map(line => {
-      // Try matching markdown list syntax that supports unordered ("-", "*", "+")
-      // or ordered lists (e.g., "1. level one").
-      const listMatch = line.match(/^([\t ]*)((?:[-*+])|\d+\.)\s+(.*)$/);
+      // Try matching markdown list syntax that supports unordered ("-", "*", "+",
+      // and common Unicode equivalents like ─ — – • ⁃) or ordered lists (e.g., "1. level one").
+      const listMatch = line.match(/^([\t ]*)((?:[-*+─—–‒•⁃])|\d+\.)\s+(.*)$/);
       if (listMatch) {
         const rawIndent = listMatch[1];
         // Count indentation: each tab counts as one level; every 4 spaces count as one level.
@@ -80,12 +124,10 @@ export default class TreePlugin extends Plugin {
       // Try matching the equal‑sign syntax (e.g., "=level one" or "= level one").
       const eqMatch = line.match(/^(=+)\s?(.*)$/);
       if (eqMatch) {
-        const level = eqMatch[1].length;
-        const text = eqMatch[2];
-        return { 
-          level, 
+        return {
+          level: eqMatch[1].length,
           leadingWhitespace: '',
-          text
+          text: eqMatch[2]
         };
       }
       
@@ -112,16 +154,22 @@ export default class TreePlugin extends Plugin {
       let prefix = '';
       // Build the prefix for each level above the current node.
       for (let lvl = 1; lvl < node.level; lvl++) {
-        prefix += hierarchy[lvl] ? '    ' : '│   ';
+        prefix += hierarchy[lvl] ? empty : vertical;
       }
-      // Append the branch indicator for the current node.
       if (node.level > 0) {
-        prefix += isLast ? '└── ' : '├── ';
+        prefix += isLast ? lastBranch : branch;
       }
-  
-      // Combine the common indent, any preserved leading whitespace (if needed), 
-      // the computed prefix, and the node's text.
-      return `${commonIndent}${node.leadingWhitespace}${prefix}${node.text}`;
+
+      // Auto-append slash to items that have children in the tree.
+      let text = node.text;
+      if (autoAppendSlash && node.level > 0) {
+        const hasChildren = index + 1 < nodes.length && nodes[index + 1].level > node.level;
+        if (hasChildren && !text.endsWith('/')) {
+          text += '/';
+        }
+      }
+
+      return `${commonIndent}${node.leadingWhitespace}${prefix}${text}`;
     }).join('\n');
   
     // SAFE DOM construction.
@@ -167,14 +215,14 @@ export default class TreePlugin extends Plugin {
     let startLine = -1;
     let endLine = -1;
 
-    // Search backwards from cursor to find the opening ```tree
+    // Search backwards from cursor to find the opening ```tree.
+    // Skip the guard on the starting line so a cursor on the closing ``` still finds the opener.
     for (let i = currentLine; i >= 0; i--) {
       if (lines[i].trim().match(/^```tree\s*$/)) {
         startLine = i;
         break;
       }
-      // If we hit another code block opening or closing, we're not in a tree block
-      if (lines[i].trim().match(/^```/)) {
+      if (i !== currentLine && lines[i].trim().match(/^```/)) {
         break;
       }
     }
@@ -234,8 +282,7 @@ export default class TreePlugin extends Plugin {
         startLine = i;
         break;
       }
-      // If we hit another code block opening or closing, we're not in a tree block
-      if (lines[i].trim().match(/^```/)) {
+      if (i !== currentLine && lines[i].trim().match(/^```/)) {
         break;
       }
     }
@@ -252,5 +299,44 @@ export default class TreePlugin extends Plugin {
 
     // Return true if cursor is anywhere within the tree code block (including start and end lines)
     return startLine !== -1 && endLine !== -1 && currentLine >= startLine && currentLine <= endLine;
+  }
+}
+
+class AsciiTreeSettingTab extends PluginSettingTab {
+  plugin: TreePlugin;
+
+  constructor(app: App, plugin: TreePlugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
+
+
+  display(): void {
+    const { containerEl } = this;
+    containerEl.empty();
+
+    new Setting(containerEl)
+      .setName('Connector dashes')
+      .setDesc('Sets how many dash characters follow each branch symbol. 2 gives the classic ├── style.')
+      .addSlider(slider => slider
+        .setLimits(1, 10, 1)
+        .setValue(this.plugin.settings.dashCount)
+        .setDynamicTooltip()
+        .onChange(async (value) => {
+          this.plugin.settings.dashCount = value;
+          await this.plugin.saveSettings();
+
+        }));
+
+    new Setting(containerEl)
+      .setName('Auto-append / to folders')
+      .setDesc('Automatically add a trailing slash to any item that has children in the tree.')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.autoAppendSlash)
+        .onChange(async (value) => {
+          this.plugin.settings.autoAppendSlash = value;
+          await this.plugin.saveSettings();
+
+        }));
   }
 }
