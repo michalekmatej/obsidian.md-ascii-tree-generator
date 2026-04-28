@@ -58,9 +58,9 @@ export default class TreePlugin extends Plugin {
 
     // Process each line into nodes according to the input methods.
     const nodes = adjustedLines.map(line => {
-      // Try matching markdown list syntax that supports unordered ("-", "*", "+")
-      // or ordered lists (e.g., "1. level one").
-      const listMatch = line.match(/^([\t ]*)((?:[-*+])|\d+\.)\s+(.*)$/);
+      // Try matching markdown list syntax that supports unordered ("-", "*", "+",
+      // and common Unicode equivalents like ─ — – • ⁃) or ordered lists (e.g., "1. level one").
+      const listMatch = line.match(/^([\t ]*)((?:[-*+─—–‒•⁃])|\d+\.)\s+(.*)$/);
       if (listMatch) {
         const rawIndent = listMatch[1];
         // Count indentation: each tab counts as one level; every 4 spaces count as one level.
